@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useRecords } from '../../hooks/useRecords';
+import { useRecord } from '../../hooks/useRecord';
 import { useDebounce } from '../../hooks/useDebounce';
 import SearchBar from './SearchBar';
 import FilterBar from './FilterBar';
@@ -8,9 +9,10 @@ import Pagination from './Pagination';
 import Spinner from '../common/Spinner';
 import ErrorMessage from '../common/ErrorMessage';
 import EmptyState from '../common/EmptyState';
+import RecordFormModal from '../forms/RecordFormModal';
 import { DEFAULT_PAGE_SIZE } from '../../utils/constants';
 
-export default function RecordsPage({ showToast }) {
+export default function RecordsPage({ showToast, showCreateModal, onCloseCreateModal }) {
   const [searchText, setSearchText] = useState('');
   const [status, setStatus] = useState('');
   const [department, setDepartment] = useState('');
@@ -34,6 +36,7 @@ export default function RecordsPage({ showToast }) {
   );
 
   const { records, pagination, loading, error, refetch } = useRecords(params);
+  const { createRecord, loading: mutating } = useRecord();
 
   const handleSort = useCallback((field, order) => {
     setSortBy(field);
@@ -46,6 +49,13 @@ export default function RecordsPage({ showToast }) {
     setter(val);
     setPage(1);
   }, []);
+
+  const handleCreate = async (data) => {
+    await createRecord(data);
+    showToast('Record created successfully!', 'success');
+    onCloseCreateModal();
+    refetch();
+  };
 
   return (
     <div className="space-y-4">
@@ -60,7 +70,6 @@ export default function RecordsPage({ showToast }) {
         />
       </div>
 
-      {/* table */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
@@ -85,6 +94,14 @@ export default function RecordsPage({ showToast }) {
       {!loading && !error && records.length > 0 && (
         <Pagination pagination={pagination} onPageChange={setPage} />
       )}
+
+      {/* create modal */}
+      <RecordFormModal
+        isOpen={showCreateModal}
+        onClose={onCloseCreateModal}
+        onSubmit={handleCreate}
+        loading={mutating}
+      />
     </div>
   );
 }
