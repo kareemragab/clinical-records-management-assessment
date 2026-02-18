@@ -5,11 +5,13 @@ import { useDebounce } from '../../hooks/useDebounce';
 import SearchBar from './SearchBar';
 import FilterBar from './FilterBar';
 import RecordsTable from './RecordsTable';
+import RecordCard from './RecordCard';
 import Pagination from './Pagination';
 import Spinner from '../common/Spinner';
 import ErrorMessage from '../common/ErrorMessage';
 import EmptyState from '../common/EmptyState';
 import RecordFormModal from '../forms/RecordFormModal';
+import ConfirmDialog from '../common/ConfirmDialog';
 import { DEFAULT_PAGE_SIZE } from '../../utils/constants';
 
 export default function RecordsPage({ showToast, showCreateModal, onCloseCreateModal }) {
@@ -19,6 +21,10 @@ export default function RecordsPage({ showToast, showCreateModal, onCloseCreateM
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState('id');
   const [sortOrder, setSortOrder] = useState('asc');
+
+  const [editRecord, setEditRecord] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const debouncedSearch = useDebounce(searchText);
 
@@ -36,7 +42,7 @@ export default function RecordsPage({ showToast, showCreateModal, onCloseCreateM
   );
 
   const { records, pagination, loading, error, refetch } = useRecords(params);
-  const { createRecord, loading: mutating } = useRecord();
+  const { createRecord, updateRecord, deleteRecord, loading: mutating } = useRecord();
 
   const handleSort = useCallback((field, order) => {
     setSortBy(field);
@@ -44,7 +50,6 @@ export default function RecordsPage({ showToast, showCreateModal, onCloseCreateM
     setPage(1);
   }, []);
 
-  // reset page when filters change
   const handleFilterChange = useCallback((setter) => (val) => {
     setter(val);
     setPage(1);
@@ -57,9 +62,33 @@ export default function RecordsPage({ showToast, showCreateModal, onCloseCreateM
     refetch();
   };
 
+  const handleEdit = (record) => {
+    setEditRecord(record);
+    setShowEditModal(true);
+  };
+
+  const handleUpdate = async (data) => {
+    await updateRecord(editRecord.id, data);
+    showToast('Record updated successfully!', 'success');
+    setShowEditModal(false);
+    setEditRecord(null);
+    refetch();
+  };
+
+  const handleDelete = (record) => {
+    setDeleteTarget(record);
+  };
+
+  const confirmDelete = async () => {
+    await deleteRecord(deleteTarget.id);
+    showToast('Record deleted successfully!', 'success');
+    setDeleteTarget(null);
+    refetch();
+  };
+
   return (
     <div className="space-y-4">
-      {/* search + filters */}
+      {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-3">
         <SearchBar value={searchText} onChange={handleFilterChange(setSearchText)} />
         <FilterBar
@@ -70,6 +99,7 @@ export default function RecordsPage({ showToast, showCreateModal, onCloseCreateM
         />
       </div>
 
+      {/* Content */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
@@ -82,24 +112,62 @@ export default function RecordsPage({ showToast, showCreateModal, onCloseCreateM
         ) : records.length === 0 ? (
           <EmptyState />
         ) : (
-          <RecordsTable
-            records={records}
-            sortBy={sortBy}
-            sortOrder={sortOrder}
-            onSort={handleSort}
-          />
+          <>
+            <RecordsTable
+              records={records}
+              sortBy={sortBy}
+              sortOrder={sortOrder}
+              onSort={handleSort}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
+            {/* cards for mobile - table is hidden on small screens */}
+            <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-3 p-4">
+              {records.map((record) => (
+                <RecordCard
+                  key={record.id}
+                  record={record}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
 
+      {/* Pagination */}
       {!loading && !error && records.length > 0 && (
         <Pagination pagination={pagination} onPageChange={setPage} />
       )}
 
-      {/* create modal */}
+      {/* Create Modal */}
       <RecordFormModal
         isOpen={showCreateModal}
         onClose={onCloseCreateModal}
         onSubmit={handleCreate}
+        loading={mutating}
+      />
+
+      {/* Edit Modal */}
+      <RecordFormModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditRecord(null);
+        }}
+        onSubmit={handleUpdate}
+        loading={mutating}
+        editRecord={editRecord}
+      />
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Delete Record"
+        message={`Are you sure you want to delete the record for ${deleteTarget?.patientName}? This action cannot be undone.`}
         loading={mutating}
       />
     </div>
