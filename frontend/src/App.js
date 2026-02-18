@@ -1,8 +1,17 @@
 import React, { useState, useCallback } from 'react';
+import AppShell from './components/layout/AppShell';
 import RecordsPage from './components/records/RecordsPage';
+import DashboardPage from './components/dashboard/DashboardPage';
 import Toast from './components/common/Toast';
 
+// page titles for the header
+const PAGE_TITLES = {
+  dashboard: 'Dashboard',
+  records: 'Clinical Records',
+};
+
 function App() {
+  const [activePage, setActivePage] = useState('records');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [toast, setToast] = useState(null);
 
@@ -10,24 +19,28 @@ function App() {
     setToast({ message, type });
   }, []);
 
+  const handleNewRecord = () => {
+    if (activePage !== 'records') setActivePage('records');
+    setShowCreateModal(true);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-4 sm:p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Clinical Records</h1>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium"
-          >
-            + New Record
-          </button>
-        </div>
-        <RecordsPage
-          showToast={showToast}
-          showCreateModal={showCreateModal}
-          onCloseCreateModal={() => setShowCreateModal(false)}
-        />
-      </div>
+    <>
+      <AppShell
+        activePage={activePage}
+        onNavigate={setActivePage}
+        onNewRecord={handleNewRecord}
+        pageTitle={PAGE_TITLES[activePage]}
+      >
+        {activePage === 'dashboard' && <DashboardPage />}
+        {activePage === 'records' && (
+          <RecordsPage
+            showToast={showToast}
+            showCreateModal={showCreateModal}
+            onCloseCreateModal={() => setShowCreateModal(false)}
+          />
+        )}
+      </AppShell>
 
       {toast && (
         <Toast
@@ -36,7 +49,7 @@ function App() {
           onClose={() => setToast(null)}
         />
       )}
-    </div>
+    </>
   );
 }
 
