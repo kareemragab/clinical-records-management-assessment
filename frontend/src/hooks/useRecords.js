@@ -11,7 +11,6 @@ export function useRecords(params) {
     setLoading(true);
     setError(null);
     try {
-      console.log('fetching records:', params);
       const result = await apiClient.getRecords(params);
       setData(result.data || []);
       setPagination(result.pagination || null);
