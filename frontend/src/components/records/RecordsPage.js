@@ -143,6 +143,7 @@ export default function RecordsPage({ showToast, showCreateModal, onCloseCreateM
 
       {/* Create Modal */}
       <RecordFormModal
+        key={showCreateModal ? 'create-open' : 'create-closed'}
         isOpen={showCreateModal}
         onClose={onCloseCreateModal}
         onSubmit={handleCreate}

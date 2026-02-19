@@ -1,5 +1,5 @@
 export function formatDate(dateString) {
-  if (!dateString) return '--';
+  if (!dateString) return 'N/A';
   const date = new Date(dateString + 'T00:00:00');
   return date.toLocaleDateString('en-US', {
     month: 'short',
